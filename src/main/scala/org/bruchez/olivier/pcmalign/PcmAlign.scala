@@ -2,44 +2,73 @@ package org.bruchez.olivier.pcmalign
 
 import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.file.{Files, Path, Paths}
+//import org.apache.spark.SparkContext
+//import org.apache.spark.rdd.RDD
+//import org.apache.spark.sql.SparkSession
 import scala.util._
 
 object PcmAlign {
+  /*
+  firstPcmShorts -> 323913804
+  secondPcmShorts -> 337595205
+
+  unitTry = Success((-158367,3.8649402872260015))
+
+  + count number of 0, 1, 2, 3, etc. differences Map[Int, Int]
+  + trim zeroes left/right => compute effective size (idea = use longest recording)
+  + do computation on left channel and then on right (should match)
+   */
+
+  val ThirtySecondsInSamples: Int = 44100 * 30
+
   def main(args: Array[String]): Unit = {
-    val unitTry =
-      for {
-        firstPcmShorts <- shortsFromWav(
-          Paths.get("/Users/olivierbruchez/Downloads/DAT tests/abdullah3.wav"),
-          LeftChannel)
-        secondPcmShorts <- shortsFromWav(
-          Paths.get("/Users/olivierbruchez/Downloads/DAT tests/abdullah5.wav"),
-          LeftChannel)
-      } yield {
-        println(s"firstPcmShorts -> ${firstPcmShorts.length}")
-        println(s"secondPcmShorts -> ${secondPcmShorts.length}")
+    for {
+      firstPcmShorts <- shortsFromWav(
+        Paths.get("/Users/olivierbruchez/Downloads/DAT tests/abdullah3.wav"),
+        LeftChannel)
+      secondPcmShorts <- shortsFromWav(
+        Paths.get("/Users/olivierbruchez/Downloads/DAT tests/abdullah5.wav"),
+        LeftChannel)
+    } {
+      println(s"1st file length (samples): ${firstPcmShorts.length}")
+      println(s"2nd file length (samples): ${secondPcmShorts.length}")
 
-        val ThirtySecondsInSamples = 44100 * 30
+      println("Algorithm 1")
+      val (minOffset1, minAverage1) = time(algorithm1(firstPcmShorts, secondPcmShorts))
+      println(s"(minOffset, minAverage) = ($minOffset1, $minAverage1)")
 
-        var minAvg = Double.MaxValue
-        var minOffset = 0
+      println("Algorithm 2")
+      val (minOffset2, minAverage2) = time(algorithm2(firstPcmShorts, secondPcmShorts))
+      println(s"(minOffset, minAverage) = ($minOffset2, $minAverage2)")
 
-        for (offset <- -ThirtySecondsInSamples to ThirtySecondsInSamples) {
-          val avg = averageOfAbsoluteDifferences(firstPcmShorts,
-                                                 secondPcmShorts,
-                                                 offset,
-                                                 maxValueCountToSum = ThirtySecondsInSamples)
-          //println(s"$offset -> $avg")
+      println("Algorithm 3")
+      val (minOffset3, minAverage3) = time(algorithm3(firstPcmShorts, secondPcmShorts))
+      println(s"(minOffset, minAverage) = ($minOffset3, $minAverage3)")
 
-          if (avg < minAvg) {
-            minAvg = avg
-            minOffset = offset
-          }
-        }
+      println("Algorithm 1 - 2nd execution")
+      val (minOffset4, minAverage4) = time(algorithm1(firstPcmShorts, secondPcmShorts))
+      println(s"(minOffset, minAverage) = ($minOffset4, $minAverage4)")
 
-        minOffset
-      }
+      println("Algorithm 2 - 2nd execution")
+      val (minOffset5, minAverage5) = time(algorithm2(firstPcmShorts, secondPcmShorts))
+      println(s"(minOffset, minAverage) = ($minOffset5, $minAverage5)")
 
-    println(s"unitTry = $unitTry")
+      println("Algorithm 3 - 2nd execution")
+      val (minOffset6, minAverage6) = time(algorithm3(firstPcmShorts, secondPcmShorts))
+      println(s"(minOffset, minAverage) = ($minOffset6, $minAverage6)")
+    }
+  }
+
+  def time[T](block: => T): T = {
+    val t0 = System.nanoTime()
+    val t = block
+    val t1 = System.nanoTime()
+
+    val timeInSeconds = (t1 - t0).toDouble / 1e9
+
+    println(s"Time in seconds: $timeInSeconds s")
+
+    t
   }
 
   def shortsFromWav(wavFile: Path, stereoChannel: StereoChannel): Try[Array[Short]] =
@@ -55,10 +84,55 @@ object PcmAlign {
       shorts
     }
 
-  def averageOfAbsoluteDifferences(firstArray: Array[Short],
-                                   secondArray: Array[Short],
-                                   offsetInFirstArray: Int,
-                                   maxValueCountToSum: Int): Double = {
+  def algorithm1(firstPcmShorts: Array[Short], secondPcmShorts: Array[Short]): (Int, Double) = {
+    var minAverage = Double.MaxValue
+    var minOffset = 0
+
+    for (offset <- -ThirtySecondsInSamples to ThirtySecondsInSamples) {
+      val avg = averageOfAbsoluteDifferences1(firstPcmShorts,
+                                              secondPcmShorts,
+                                              offset,
+                                              maxValueCountToSum = ThirtySecondsInSamples)
+      
+      if (avg < minAverage) {
+        minAverage = avg
+        minOffset = offset
+      }
+    }
+
+    minOffset -> minAverage
+  }
+
+  def algorithm2(firstPcmShorts: Array[Short], secondPcmShorts: Array[Short]): (Int, Double) = {
+    val offsetsAndAverages = (-ThirtySecondsInSamples to ThirtySecondsInSamples).par map { offset =>
+      val average = averageOfAbsoluteDifferences1(firstPcmShorts,
+                                                  secondPcmShorts,
+                                                  offset,
+                                                  maxValueCountToSum = ThirtySecondsInSamples)
+
+      offset -> average
+    }
+
+    offsetsAndAverages.minBy(_._2)
+  }
+
+  def algorithm3(firstPcmShorts: Array[Short], secondPcmShorts: Array[Short]): (Int, Double) = {
+    val offsetsAndAverages = (-ThirtySecondsInSamples to ThirtySecondsInSamples).par map { offset =>
+      val average = averageOfAbsoluteDifferences2(firstPcmShorts,
+                                                  secondPcmShorts,
+                                                  offset,
+                                                  maxValueCountToSum = ThirtySecondsInSamples)
+
+      offset -> average
+    }
+
+    offsetsAndAverages.minBy(_._2)
+  }
+
+  def averageOfAbsoluteDifferences1(firstArray: Array[Short],
+                                    secondArray: Array[Short],
+                                    offsetInFirstArray: Int,
+                                    maxValueCountToSum: Int): Double = {
     val (firstArrayToProcess, secondArrayToProcess, positiveOffsetInFirstArray) =
       if (offsetInFirstArray >= 0) {
         (firstArray, secondArray, offsetInFirstArray)
@@ -79,4 +153,79 @@ object PcmAlign {
 
     sum / secondIndex
   }
+
+  def averageOfAbsoluteDifferences2(firstArray: Array[Short],
+                                    secondArray: Array[Short],
+                                    offsetInFirstArray: Int,
+                                    maxValueCountToSum: Int): Double = {
+    val (firstArrayToProcess, secondArrayToProcess, positiveOffsetInFirstArray) =
+      if (offsetInFirstArray >= 0) {
+        (firstArray, secondArray, offsetInFirstArray)
+      } else {
+        (secondArray, firstArray, -offsetInFirstArray)
+      }
+
+    var firstIndex = positiveOffsetInFirstArray
+    var secondIndex = 0
+
+    var sum = 0L
+
+    while (firstIndex < firstArrayToProcess.length && secondIndex < secondArrayToProcess.length && secondIndex < maxValueCountToSum) {
+      sum += math.abs(firstArrayToProcess(firstIndex) - secondArrayToProcess(secondIndex)).toLong
+      firstIndex += 1
+      secondIndex += 1
+    }
+
+    sum.toDouble / secondIndex
+  }
+
+  /*
+  // Out of memory
+  def averageOfAbsoluteDifferences(firstArray: Array[Short],
+                                   secondArray: Array[Short],
+                                   offsetInFirstArray: Int,
+                                   maxValueCountToSum: Int): Double = {
+    val (firstArrayToProcess, secondArrayToProcess, positiveOffsetInFirstArray) =
+      if (offsetInFirstArray >= 0) {
+        (firstArray, secondArray, offsetInFirstArray)
+      } else {
+        (secondArray, firstArray, -offsetInFirstArray)
+      }
+
+    val zipped =
+      firstArrayToProcess.drop(positiveOffsetInFirstArray).zip(secondArrayToProcess).toStream
+    zipped.map(pair => math.abs(pair._1 - pair._2).toLong).sum.toDouble / zipped.length
+  }
+   */
+
+  /*
+  lazy private val spark: SparkSession = SparkSession.builder.appName("pcm-align").getOrCreate()
+  lazy private val sc: SparkContext = spark.sparkContext
+
+  // Out of memory
+  def averageOfAbsoluteDifferences(firstArray: Array[Short],
+                                   secondArray: Array[Short],
+                                   offsetInFirstArray: Int,
+                                   maxValueCountToSum: Int): Double = {
+    val (firstArrayToProcess, secondArrayToProcess, positiveOffsetInFirstArray) =
+      if (offsetInFirstArray >= 0) {
+        (firstArray, secondArray, offsetInFirstArray)
+      } else {
+        (secondArray, firstArray, -offsetInFirstArray)
+      }
+
+    println("Zipping arrays...")
+    val zippedArray = firstArrayToProcess.drop(positiveOffsetInFirstArray).zip(secondArrayToProcess)
+
+    println("Parallelizing/persist zipped arrays...")
+    val shorts: RDD[(Short, Short)] = sc.parallelize(zippedArray).persist()
+
+    println("Computing the sum of absolute differences...")
+    val sumOfAbsoluteDifferences = shorts map { pair: (Short, Short) =>
+      math.abs(pair._1 - pair._2).toLong
+    } reduce (_ + _)
+
+    sumOfAbsoluteDifferences.toDouble / zippedArray.length
+  }
+ */
 }
