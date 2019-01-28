@@ -2,9 +2,6 @@ package org.bruchez.olivier.pcmalign
 
 import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.file.{Files, Path, Paths}
-//import org.apache.spark.SparkContext
-//import org.apache.spark.rdd.RDD
-//import org.apache.spark.sql.SparkSession
 import scala.util._
 
 object PcmAlign {
@@ -12,14 +9,16 @@ object PcmAlign {
   firstPcmShorts -> 323913804
   secondPcmShorts -> 337595205
 
-  unitTry = Success((-158367,3.8649402872260015))
+  (minOffset, minAverage) = (-158367, 3.8649402872260015)
 
   + count number of 0, 1, 2, 3, etc. differences Map[Int, Int]
   + trim zeroes left/right => compute effective size (idea = use longest recording)
   + do computation on left channel and then on right (should match)
    */
 
-  val ThirtySecondsInSamples: Int = 44100 * 30
+  // @todo sample rate should be extracted from WAV file
+  val OneSecondInSamples: Int = 44100
+  val ThirtySecondsInSamples: Int = OneSecondInSamples * 30
 
   def main(args: Array[String]): Unit = {
     for {
@@ -30,24 +29,30 @@ object PcmAlign {
         Paths.get("/Users/olivierbruchez/Downloads/DAT tests/abdullah5.wav"),
         LeftChannel)
     } {
+      val maxOffset = ThirtySecondsInSamples
+
       println(s"1st file length (samples): ${firstPcmShorts.length}")
       println(s"2nd file length (samples): ${secondPcmShorts.length}")
 
       println("Algorithm 1")
-      val (minOffset1, minAverage1) = time(algorithm1(firstPcmShorts, secondPcmShorts))
+      val (minOffset1, minAverage1) = time(algorithm1(firstPcmShorts, secondPcmShorts, maxOffset))
       println(s"(minOffset, minAverage) = ($minOffset1, $minAverage1)")
 
-      println("Algorithm 2")
-      val (minOffset2, minAverage2) = time(algorithm2(firstPcmShorts, secondPcmShorts))
-      println(s"(minOffset, minAverage) = ($minOffset2, $minAverage2)")
+      for (zoneCount <- 2 to 10) {
+        println(s"Algorithm 2 (zoneCount = $zoneCount)")
+        val (minOffset2, minAverage2) = time(algorithm2(firstPcmShorts, secondPcmShorts, maxOffset, zoneCount))
+        println(s"(minOffset, minAverage) = ($minOffset2, $minAverage2)")
+      }
 
       println("Algorithm 1 - 2nd execution")
-      val (minOffset4, minAverage4) = time(algorithm1(firstPcmShorts, secondPcmShorts))
+      val (minOffset4, minAverage4) = time(algorithm1(firstPcmShorts, secondPcmShorts, maxOffset))
       println(s"(minOffset, minAverage) = ($minOffset4, $minAverage4)")
-
-      println("Algorithm 2 - 2nd execution")
-      val (minOffset5, minAverage5) = time(algorithm2(firstPcmShorts, secondPcmShorts))
-      println(s"(minOffset, minAverage) = ($minOffset5, $minAverage5)")
+      
+      for (zoneCount <- 2 to 10) {
+        println(s"Algorithm 2 - 2nd execution (zoneCount = $zoneCount)")
+        val (minOffset5, minAverage5) = time(algorithm2(firstPcmShorts, secondPcmShorts, maxOffset, zoneCount))
+        println(s"(minOffset, minAverage) = ($minOffset5, $minAverage5)")
+      }
     }
   }
 
@@ -76,11 +81,14 @@ object PcmAlign {
       shorts
     }
 
-  def algorithm1(firstPcmShorts: Array[Short], secondPcmShorts: Array[Short]): (Int, Double) = {
-    val offsetsAndAverages = (-ThirtySecondsInSamples to ThirtySecondsInSamples).par map { offset =>
+  def algorithm1(firstPcmShorts: Array[Short],
+                 secondPcmShorts: Array[Short],
+                 maxOffset: Int): (Int, Double) = {
+    val offsetsAndAverages = (-maxOffset to maxOffset).par map { offset =>
       val average = averageOfAbsoluteDifferences(firstPcmShorts,
                                                  secondPcmShorts,
-                                                 offset,
+                                                 offsetInFirstArray = offset,
+                                                 compareValuesStartingFrom = 0,
                                                  maxValueCountToSum = ThirtySecondsInSamples)
 
       offset -> average
@@ -89,15 +97,45 @@ object PcmAlign {
     offsetsAndAverages.minBy(_._2)
   }
 
-  def algorithm2(firstPcmShorts: Array[Short], secondPcmShorts: Array[Short]): (Int, Double) = {
-    // @todo
-    algorithm1(firstPcmShorts, secondPcmShorts)
+  def algorithm2(firstPcmShorts: Array[Short],
+                 secondPcmShorts: Array[Short],
+                 maxOffset: Int,
+                 zoneCount: Int): (Int, Double) = {
+    val smallestArraySize = math.min(firstPcmShorts.length, secondPcmShorts.length)
+
+    //val ZoneCount = 10
+    val ZoneSize = OneSecondInSamples
+
+    // Skip the first and last 10% of the data
+    val start = smallestArraySize / 10
+    val end = (9 * smallestArraySize.toLong / 10).toInt - ZoneSize
+
+    // Sample ten zones between 10% and 90%
+    val zoneStarts =
+      (0 until zoneCount).map(i => (start + (end - start).toLong * i / (zoneCount - 1)).toInt)
+
+    val offsetsAndAverages = (-maxOffset to maxOffset).par map { offset =>
+      val average = (zoneStarts map { zoneStart =>
+        averageOfAbsoluteDifferences(firstPcmShorts,
+                                     secondPcmShorts,
+                                     offsetInFirstArray = offset,
+                                     compareValuesStartingFrom = zoneStart,
+                                     maxValueCountToSum = ZoneSize)
+      }).sum / zoneStarts.size
+
+      offset -> average
+    }
+
+    offsetsAndAverages.minBy(_._2)
   }
 
   def averageOfAbsoluteDifferences(firstArray: Array[Short],
                                    secondArray: Array[Short],
                                    offsetInFirstArray: Int,
+                                   compareValuesStartingFrom: Int,
                                    maxValueCountToSum: Int): Double = {
+    assert(compareValuesStartingFrom >= 0)
+
     val (firstArrayToProcess, secondArrayToProcess, positiveOffsetInFirstArray) =
       if (offsetInFirstArray >= 0) {
         (firstArray, secondArray, offsetInFirstArray)
@@ -105,17 +143,20 @@ object PcmAlign {
         (secondArray, firstArray, -offsetInFirstArray)
       }
 
-    var firstIndex = positiveOffsetInFirstArray
-    var secondIndex = 0
+    var firstIndex = compareValuesStartingFrom + positiveOffsetInFirstArray
+    var secondIndex = compareValuesStartingFrom
+
+    var valueCount = 0
 
     var sum = 0L
 
-    while (firstIndex < firstArrayToProcess.length && secondIndex < secondArrayToProcess.length && secondIndex < maxValueCountToSum) {
+    while (firstIndex < firstArrayToProcess.length && secondIndex < secondArrayToProcess.length && valueCount < maxValueCountToSum) {
       sum += math.abs(firstArrayToProcess(firstIndex) - secondArrayToProcess(secondIndex)).toLong
       firstIndex += 1
       secondIndex += 1
+      valueCount += 1
     }
 
-    sum.toDouble / secondIndex
+    sum.toDouble / valueCount
   }
 }
