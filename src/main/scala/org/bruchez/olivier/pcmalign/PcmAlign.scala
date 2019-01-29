@@ -40,17 +40,19 @@ object PcmAlign {
 
       for (zoneCount <- 2 to 10) {
         println(s"Algorithm 2 (zoneCount = $zoneCount)")
-        val (minOffset2, minAverage2) = time(algorithm2(firstPcmShorts, secondPcmShorts, maxOffset, zoneCount))
+        val (minOffset2, minAverage2) = time(
+          algorithm2(firstPcmShorts, secondPcmShorts, maxOffset, zoneCount))
         println(s"(minOffset, minAverage) = ($minOffset2, $minAverage2)")
       }
 
       println("Algorithm 1 - 2nd execution")
       val (minOffset4, minAverage4) = time(algorithm1(firstPcmShorts, secondPcmShorts, maxOffset))
       println(s"(minOffset, minAverage) = ($minOffset4, $minAverage4)")
-      
+
       for (zoneCount <- 2 to 10) {
         println(s"Algorithm 2 - 2nd execution (zoneCount = $zoneCount)")
-        val (minOffset5, minAverage5) = time(algorithm2(firstPcmShorts, secondPcmShorts, maxOffset, zoneCount))
+        val (minOffset5, minAverage5) = time(
+          algorithm2(firstPcmShorts, secondPcmShorts, maxOffset, zoneCount))
         println(s"(minOffset, minAverage) = ($minOffset5, $minAverage5)")
       }
     }
