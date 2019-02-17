@@ -1,7 +1,8 @@
 package org.bruchez.olivier.pcmalign
 
 import java.io.File
-import java.nio.file.Path
+import java.nio.{ByteBuffer, ByteOrder}
+import java.nio.file.{Files, Path}
 import scala.sys.process._
 import scala.util._
 
@@ -41,4 +42,17 @@ object Ffmpeg {
         Failure(throwable)
     }
   }
+
+  def shortsFromWav(wavFile: Path, stereoChannel: StereoChannel): Try[Array[Short]] =
+    Ffmpeg.monoS16lePcmFromWavFile(wavFile, stereoChannel) map { pcmFile =>
+      val buffer = Files.readAllBytes(pcmFile)
+
+      val byteBuffer = ByteBuffer.wrap(buffer)
+      byteBuffer.order(ByteOrder.LITTLE_ENDIAN)
+
+      val shorts = new Array[Short](buffer.length / 2)
+      byteBuffer.asShortBuffer.get(shorts)
+
+      shorts
+    }
 }
