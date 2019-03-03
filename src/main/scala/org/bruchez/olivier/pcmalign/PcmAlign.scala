@@ -4,10 +4,6 @@ import java.nio.file.{Path, Paths}
 import scala.util._
 
 object PcmAlign {
-  /*
-  + do computation on left channel and then on right (should match)
-   */
-
   def main(args: Array[String]): Unit = {
     if (args.length == 1) {
       findCorrectWavFileInDirectory(Paths.get(args.head))

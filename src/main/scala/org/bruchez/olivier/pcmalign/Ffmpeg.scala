@@ -39,6 +39,7 @@ object Ffmpeg {
         Success(outputFile.toPath)
       case Failure(throwable) =>
         outputFile.delete()
+        System.err.println(s"Following command failed: $cmd")
         Failure(throwable)
     }
   }

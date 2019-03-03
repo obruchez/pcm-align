@@ -64,4 +64,17 @@ object Distance {
 
     Distance(absoluteDifferenceCounts = absoluteDifferenceCounts.toMap)
   }
+
+  def merged(firstDistance: Distance, secondDistance: Distance): Distance = {
+    val absoluteDifferences = firstDistance.absoluteDifferenceCounts.keySet ++ secondDistance.absoluteDifferenceCounts.keySet
+
+    val absoluteDifferenceCounts = (for (absoluteDifference <- absoluteDifferences) yield {
+      val firstCount = firstDistance.absoluteDifferenceCounts.getOrElse(absoluteDifference, 0)
+      val secondCount = secondDistance.absoluteDifferenceCounts.getOrElse(absoluteDifference, 0)
+
+      absoluteDifference -> (firstCount + secondCount)
+    }).toMap
+
+    Distance(absoluteDifferenceCounts)
+  }
 }

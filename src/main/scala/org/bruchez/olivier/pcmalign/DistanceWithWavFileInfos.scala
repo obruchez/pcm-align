@@ -7,12 +7,21 @@ case class DistanceWithWavFileInfos(distance: Distance,
 
 object DistanceWithWavFileInfos {
   def apply(firstWavFile: Path, secondWavFile: Path): DistanceWithWavFileInfos = {
-    val (firstWavFileInfo, firstPcmShorts) = WavFileInfo.wavFileInfoAndPcmShorts(firstWavFile)
-    val (secondWavFileInfo, secondPcmShorts) = WavFileInfo.wavFileInfoAndPcmShorts(secondWavFile)
+    val (firstWavFileInfo, firstPcmShortsLeft, firstPcmShortsRight) =
+      WavFileInfo.wavFileInfoAndPcmShorts(firstWavFile)
+    val (secondWavFileInfo, secondPcmShortsLeft, secondPcmShortsRight) =
+      WavFileInfo.wavFileInfoAndPcmShorts(secondWavFile)
 
-    val bestAlignment = Alignment.bestAlignment(firstPcmShorts, secondPcmShorts)._1
-    val distance = Distance(firstPcmShorts, secondPcmShorts, bestAlignment)
+    val bestAlignmentLeft = Alignment.bestAlignment(firstPcmShortsLeft, secondPcmShortsLeft)._1
+    val distanceLeft = Distance(firstPcmShortsLeft, secondPcmShortsLeft, bestAlignmentLeft)
 
-    DistanceWithWavFileInfos(distance, firstWavFileInfo, secondWavFileInfo)
+    val bestAlignmentRight = Alignment.bestAlignment(firstPcmShortsRight, secondPcmShortsRight)._1
+    val distanceRight = Distance(firstPcmShortsRight, secondPcmShortsRight, bestAlignmentRight)
+
+    assert(bestAlignmentLeft == bestAlignmentRight)
+
+    val distanceMerged = Distance.merged(distanceLeft, distanceRight)
+
+    DistanceWithWavFileInfos(distanceMerged, firstWavFileInfo, secondWavFileInfo)
   }
 }

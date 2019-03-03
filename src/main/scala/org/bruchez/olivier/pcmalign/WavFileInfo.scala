@@ -5,24 +5,32 @@ import java.nio.file.Path
 case class WavFileInfo(file: Path, significantLength: Int)
 
 object WavFileInfo {
-  def wavFileInfoAndPcmShorts(wavFile: Path): (WavFileInfo, Array[Short]) = {
-    val pcmShorts = Ffmpeg.shortsFromWav(wavFile, LeftChannel).get
-    val wavFileSignificantLength = significantLength(pcmShorts)
-    (WavFileInfo(wavFile, wavFileSignificantLength), pcmShorts)
+  def wavFileInfoAndPcmShorts(wavFile: Path): (WavFileInfo, Array[Short], Array[Short]) = {
+    val pcmShortsLeft = Ffmpeg.shortsFromWav(wavFile, LeftChannel).get
+    val pcmShortsRight = Ffmpeg.shortsFromWav(wavFile, RightChannel).get
+    val wavFileSignificantLength = significantLength(pcmShortsLeft, pcmShortsRight)
+    (WavFileInfo(wavFile, wavFileSignificantLength), pcmShortsLeft, pcmShortsRight)
   }
 
   val DefaultHeadingAndTrailingThreshold = 16
 
   def headingAndTrailingSilenceLengths(
-      pcmShorts: Array[Short],
+      pcmShortsLeft: Array[Short],
+      pcmShortsRight: Array[Short],
       threshold: Int = DefaultHeadingAndTrailingThreshold): (Int, Int) = {
+    assert(pcmShortsLeft.length == pcmShortsRight.length)
+
     var headingSilenceLength = 0
-    while (pcmShorts(headingSilenceLength).abs <= threshold && headingSilenceLength < pcmShorts.length) {
+    while (pcmShortsLeft(headingSilenceLength).abs <= threshold &&
+           pcmShortsRight(headingSilenceLength).abs <= threshold &&
+           headingSilenceLength < pcmShortsLeft.length) {
       headingSilenceLength += 1
     }
 
     var trailingSilenceLength = 0
-    while (pcmShorts(pcmShorts.length - trailingSilenceLength - 1).abs <= threshold && trailingSilenceLength < pcmShorts.length) {
+    while (pcmShortsLeft(pcmShortsLeft.length - trailingSilenceLength - 1).abs <= threshold &&
+           pcmShortsRight(pcmShortsRight.length - trailingSilenceLength - 1).abs <= threshold &&
+           trailingSilenceLength < pcmShortsLeft.length) {
       trailingSilenceLength += 1
     }
 
@@ -30,8 +38,11 @@ object WavFileInfo {
   }
 
   // Length without heading and trailing silences
-  def significantLength(pcmShorts: Array[Short]): Int = {
-    val (headingSilenceLength, trailingSilenceLength) = headingAndTrailingSilenceLengths(pcmShorts)
-    pcmShorts.length - (headingSilenceLength + trailingSilenceLength)
+  def significantLength(pcmShortsLeft: Array[Short], pcmShortsRight: Array[Short]): Int = {
+    assert(pcmShortsLeft.length == pcmShortsRight.length)
+
+    val (headingSilenceLength, trailingSilenceLength) =
+      headingAndTrailingSilenceLengths(pcmShortsLeft, pcmShortsRight)
+    pcmShortsLeft.length - (headingSilenceLength + trailingSilenceLength)
   }
 }
