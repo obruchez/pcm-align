@@ -30,6 +30,11 @@ case class Distance(absoluteDifferenceCounts: Map[Int, Int]) {
   }
 
   lazy val aligned: Boolean = percentile(Distance.ReferencePercentile) <= Distance.ThresholdValue
+
+  lazy val asString: String =
+    f"avg diff = $averageOfAbsoluteDifferences%.3f, " +
+      s"percentile(${Distance.ReferencePercentile}) = ${percentile(Distance.ReferencePercentile)}, " +
+      s"aligned = ${if (aligned) "true" else "false"}"
 }
 
 object Distance {

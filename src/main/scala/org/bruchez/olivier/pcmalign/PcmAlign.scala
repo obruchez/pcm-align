@@ -13,6 +13,8 @@ object PcmAlign {
   }
 
   def findCorrectWavFileInDirectory(directory: Path): Try[Path] = {
+    println(s"Parsing files in ${directory.toFile.getAbsolutePath}...")
+
     val wavFiles = FileUtils.allFilesInPath(directory, recursive = true) filter { file =>
       val (_, extensionOption) = FileUtils.baseNameAndExtension(file)
       extensionOption.exists(_.trim.toLowerCase == "wav")
@@ -20,25 +22,36 @@ object PcmAlign {
       _.toFile.getAbsolutePath
     }
 
+    println()
+
     println(s"WAV file count: ${wavFiles.size}")
+    wavFiles.indices.foreach(i => println(s" (${i + 1}) ${wavFiles(i).toFile.getAbsolutePath}"))
+    println()
 
     val pairCandidatesByDistance =
       (for {
         i <- wavFiles.indices
         j <- i + 1 until wavFiles.size
-        distanceWithWavFileInfos = DistanceWithWavFileInfos(firstWavFile = wavFiles(i),
-                                                            secondWavFile = wavFiles(j))
+        distanceWithWavFileInfos = {
+          print(s"Comparing files ${i + 1} and ${j + 1}...")
+          val distanceWithWavFileInfos =
+            DistanceWithWavFileInfos(firstWavFile = wavFiles(i), secondWavFile = wavFiles(j))
+          println(s" ${distanceWithWavFileInfos.distance.asString}")
+          distanceWithWavFileInfos
+        }
         if distanceWithWavFileInfos.distance.aligned
       } yield distanceWithWavFileInfos).sortBy(_.distance.averageOfAbsoluteDifferences)
+
+    println()
 
     println(s"WAV file pair candidate count: ${pairCandidatesByDistance.size}")
 
     val bestFiles =
       for (distanceWithWavFileInfos <- pairCandidatesByDistance) yield {
         println(
-          s" - distance ${distanceWithWavFileInfos.distance.averageOfAbsoluteDifferences} for " +
-            s"'${distanceWithWavFileInfos.firstWavFileInfo.file.toFile.getName}' and " +
-            s"'${distanceWithWavFileInfos.secondWavFileInfo.file.toFile.getName}'")
+          s" - '${distanceWithWavFileInfos.firstWavFileInfo.file.toFile.getName}' vs " +
+            s"'${distanceWithWavFileInfos.secondWavFileInfo.file.toFile.getName}': " +
+            s"${distanceWithWavFileInfos.distance.asString}")
 
         if (distanceWithWavFileInfos.firstWavFileInfo.significantLength > distanceWithWavFileInfos.secondWavFileInfo.significantLength) {
           val extra = distanceWithWavFileInfos.firstWavFileInfo.significantLength - distanceWithWavFileInfos.secondWavFileInfo.significantLength
