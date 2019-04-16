@@ -18,7 +18,12 @@ object DistanceWithWavFileInfos {
     val bestAlignmentRight = Alignment.bestAlignment(firstPcmShortsRight, secondPcmShortsRight)._1
     val distanceRight = Distance(firstPcmShortsRight, secondPcmShortsRight, bestAlignmentRight)
 
-    assert(bestAlignmentLeft == bestAlignmentRight)
+    if (bestAlignmentLeft != bestAlignmentRight) {
+      print()
+      println(
+        s"Warning: best alignment for left = $bestAlignmentLeft vs right = $bestAlignmentRight")
+    }
+    //assert(bestAlignmentLeft == bestAlignmentRight)
 
     val distanceMerged = Distance.merged(distanceLeft, distanceRight)
 
