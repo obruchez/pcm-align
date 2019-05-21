@@ -46,14 +46,18 @@ object Ffmpeg {
 
   def shortsFromWav(wavFile: Path, stereoChannel: StereoChannel): Try[Array[Short]] =
     Ffmpeg.monoS16lePcmFromWavFile(wavFile, stereoChannel) map { pcmFile =>
-      val buffer = Files.readAllBytes(pcmFile)
+      try {
+        val buffer = Files.readAllBytes(pcmFile)
 
-      val byteBuffer = ByteBuffer.wrap(buffer)
-      byteBuffer.order(ByteOrder.LITTLE_ENDIAN)
+        val byteBuffer = ByteBuffer.wrap(buffer)
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN)
 
-      val shorts = new Array[Short](buffer.length / 2)
-      byteBuffer.asShortBuffer.get(shorts)
+        val shorts = new Array[Short](buffer.length / 2)
+        byteBuffer.asShortBuffer.get(shorts)
 
-      shorts
+        shorts
+      } finally {
+        pcmFile.toFile.delete()
+      }
     }
 }
