@@ -19,7 +19,7 @@ object DistanceWithWavFileInfos {
     val distanceRight = Distance(firstPcmShortsRight, secondPcmShortsRight, bestAlignmentRight)
 
     if (bestAlignmentLeft != bestAlignmentRight) {
-      print()
+      println()
       println(
         s"Warning: best alignment for left = $bestAlignmentLeft vs right = $bestAlignmentRight")
     }
