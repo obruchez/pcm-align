@@ -1,8 +1,9 @@
 package org.bruchez.olivier.pcmalign
 
-import java.nio.file._
 import org.apache.commons.io.FilenameUtils
-import scala.collection.JavaConverters._
+
+import java.nio.file._
+import scala.jdk.CollectionConverters._
 
 object FileUtils {
   def allFilesInPath(path: Path, recursive: Boolean): Seq[Path] =
@@ -13,6 +14,8 @@ object FileUtils {
     }
 
   def baseNameAndExtension(path: Path): (String, Option[String]) =
-    (FilenameUtils.getBaseName(path.toString),
-     Some(FilenameUtils.getExtension(path.toString)).filterNot(_.isEmpty))
+    (
+      FilenameUtils.getBaseName(path.toString),
+      Some(FilenameUtils.getExtension(path.toString)).filterNot(_.isEmpty)
+    )
 }

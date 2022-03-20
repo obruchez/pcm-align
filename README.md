@@ -1,6 +1,6 @@
 # pcm-align
 
-[![Build Status](https://travis-ci.org/obruchez/pcm-align.svg?branch=master)](https://travis-ci.org/obruchez/pcm-align)
+[![Scala CI](https://github.com/obruchez/pcm-align/actions/workflows/scala.yml/badge.svg)](https://github.com/obruchez/pcm-align/actions/workflows/scala.yml)
 
 Test if WAV files captured from DAT tapes are aligned (i.e. more or less the same). This is a project I needed for a very specific case. My old Sony TCD-D100 portable DAT recorder has an S/PDIF output, but there's some digital noise on the 4 least significant bits (random, not noticeable, completely acceptable in my case). This is something I noticed with my current hardware (2019), as well as a very long time ago with my old soundcard. The problem probably comes from the Sony recorder. Another problem is that I want to automatically detect drops (i.e. short bursts of lost data), if they occur. So the idea is that I will transfer one DAT tape several times. Then, I want to automatically align the resulting WAV files and determine whether some data was lost in one WAV file or another. The algorithm I use for the computation of the best shift/alignment is neither fast nor memory-efficient (WAV files are loaded into memory!). But it works.
 

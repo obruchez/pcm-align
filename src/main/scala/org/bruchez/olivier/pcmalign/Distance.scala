@@ -41,9 +41,11 @@ object Distance {
   val ReferencePercentile = 99.99
   val ThresholdValue = 50
 
-  def apply(firstArray: Array[Short],
-            secondArray: Array[Short],
-            offsetInFirstArray: Int): Distance = {
+  def apply(
+      firstArray: Array[Short],
+      secondArray: Array[Short],
+      offsetInFirstArray: Int
+  ): Distance = {
     val (firstArrayToProcess, secondArrayToProcess, positiveOffsetInFirstArray) =
       if (offsetInFirstArray >= 0) {
         (firstArray, secondArray, offsetInFirstArray)
@@ -71,7 +73,8 @@ object Distance {
   }
 
   def merged(firstDistance: Distance, secondDistance: Distance): Distance = {
-    val absoluteDifferences = firstDistance.absoluteDifferenceCounts.keySet ++ secondDistance.absoluteDifferenceCounts.keySet
+    val absoluteDifferences =
+      firstDistance.absoluteDifferenceCounts.keySet ++ secondDistance.absoluteDifferenceCounts.keySet
 
     val absoluteDifferenceCounts = (for (absoluteDifference <- absoluteDifferences) yield {
       val firstCount = firstDistance.absoluteDifferenceCounts.getOrElse(absoluteDifference, 0)

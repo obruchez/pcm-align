@@ -1,6 +1,7 @@
 package org.bruchez.olivier.pcmalign
 
 import java.nio.file.Path
+import scala.collection.parallel.CollectionConverters._
 
 object Alignment {
   // @todo sample rate should be extracted from WAV file
@@ -10,10 +11,12 @@ object Alignment {
   // Adding more zones doesn't seem to help at all
   val DefaultZoneCount = 3
 
-  def bestAlignment(firstPcmShorts: Array[Short],
-                    secondPcmShorts: Array[Short],
-                    maxOffset: Int = ThirtySecondsInSamples,
-                    zoneCount: Int = DefaultZoneCount): (Int, Double) = {
+  def bestAlignment(
+      firstPcmShorts: Array[Short],
+      secondPcmShorts: Array[Short],
+      maxOffset: Int = ThirtySecondsInSamples,
+      zoneCount: Int = DefaultZoneCount
+  ): (Int, Double) = {
     val smallestArraySize = math.min(firstPcmShorts.length, secondPcmShorts.length)
 
     val ZoneSize = OneSecondInSamples
@@ -28,11 +31,13 @@ object Alignment {
 
     val offsetsAndAverages = (-maxOffset to maxOffset).par map { offset =>
       val average = (zoneStarts map { zoneStart =>
-        averageOfAbsoluteDifferences(firstPcmShorts,
-                                     secondPcmShorts,
-                                     offsetInFirstArray = offset,
-                                     compareValuesStartingFrom = zoneStart,
-                                     maxValueCountToSum = ZoneSize)
+        averageOfAbsoluteDifferences(
+          firstPcmShorts,
+          secondPcmShorts,
+          offsetInFirstArray = offset,
+          compareValuesStartingFrom = zoneStart,
+          maxValueCountToSum = ZoneSize
+        )
       }).sum / zoneStarts.size
 
       offset -> average
@@ -41,11 +46,13 @@ object Alignment {
     offsetsAndAverages.minBy(_._2)
   }
 
-  def averageOfAbsoluteDifferences(firstArray: Array[Short],
-                                   secondArray: Array[Short],
-                                   offsetInFirstArray: Int,
-                                   compareValuesStartingFrom: Int,
-                                   maxValueCountToSum: Int): Double = {
+  def averageOfAbsoluteDifferences(
+      firstArray: Array[Short],
+      secondArray: Array[Short],
+      offsetInFirstArray: Int,
+      compareValuesStartingFrom: Int,
+      maxValueCountToSum: Int
+  ): Double = {
     assert(compareValuesStartingFrom >= 0)
 
     val (firstArrayToProcess, secondArrayToProcess, positiveOffsetInFirstArray) =
@@ -62,7 +69,9 @@ object Alignment {
 
     var sum = 0L
 
-    while (firstIndex < firstArrayToProcess.length && secondIndex < secondArrayToProcess.length && valueCount < maxValueCountToSum) {
+    while (
+      firstIndex < firstArrayToProcess.length && secondIndex < secondArrayToProcess.length && valueCount < maxValueCountToSum
+    ) {
       sum += math.abs(firstArrayToProcess(firstIndex) - secondArrayToProcess(secondIndex)).toLong
       firstIndex += 1
       secondIndex += 1
@@ -72,15 +81,19 @@ object Alignment {
     sum.toDouble / valueCount
   }
 
-  def bestAlignmentSlow(firstPcmShorts: Array[Short],
-                        secondPcmShorts: Array[Short],
-                        maxOffset: Int): (Int, Double) = {
+  def bestAlignmentSlow(
+      firstPcmShorts: Array[Short],
+      secondPcmShorts: Array[Short],
+      maxOffset: Int
+  ): (Int, Double) = {
     val offsetsAndAverages = (-maxOffset to maxOffset).par map { offset =>
-      val average = averageOfAbsoluteDifferences(firstPcmShorts,
-                                                 secondPcmShorts,
-                                                 offsetInFirstArray = offset,
-                                                 compareValuesStartingFrom = 0,
-                                                 maxValueCountToSum = ThirtySecondsInSamples)
+      val average = averageOfAbsoluteDifferences(
+        firstPcmShorts,
+        secondPcmShorts,
+        offsetInFirstArray = offset,
+        compareValuesStartingFrom = 0,
+        maxValueCountToSum = ThirtySecondsInSamples
+      )
 
       offset -> average
     }
@@ -112,25 +125,29 @@ object Alignment {
 
       println("Algorithm 1")
       val (minOffset1, minAverage1) = time(
-        bestAlignmentSlow(firstPcmShorts, secondPcmShorts, maxOffset))
+        bestAlignmentSlow(firstPcmShorts, secondPcmShorts, maxOffset)
+      )
       println(s"(minOffset, minAverage) = ($minOffset1, $minAverage1)")
 
       for (zoneCount <- 2 to 10) {
         println(s"Algorithm 2 (zoneCount = $zoneCount)")
         val (minOffset2, minAverage2) = time(
-          bestAlignment(firstPcmShorts, secondPcmShorts, maxOffset, zoneCount))
+          bestAlignment(firstPcmShorts, secondPcmShorts, maxOffset, zoneCount)
+        )
         println(s"(minOffset, minAverage) = ($minOffset2, $minAverage2)")
       }
 
       println("Algorithm 1 - 2nd execution")
       val (minOffset4, minAverage4) = time(
-        bestAlignmentSlow(firstPcmShorts, secondPcmShorts, maxOffset))
+        bestAlignmentSlow(firstPcmShorts, secondPcmShorts, maxOffset)
+      )
       println(s"(minOffset, minAverage) = ($minOffset4, $minAverage4)")
 
       for (zoneCount <- 2 to 10) {
         println(s"Algorithm 2 - 2nd execution (zoneCount = $zoneCount)")
         val (minOffset5, minAverage5) = time(
-          bestAlignment(firstPcmShorts, secondPcmShorts, maxOffset, zoneCount))
+          bestAlignment(firstPcmShorts, secondPcmShorts, maxOffset, zoneCount)
+        )
         println(s"(minOffset, minAverage) = ($minOffset5, $minAverage5)")
       }
     }

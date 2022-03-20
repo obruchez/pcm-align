@@ -1,9 +1,11 @@
 package org.bruchez.olivier.pcmalign
 import java.nio.file.Path
 
-case class DistanceWithWavFileInfos(distance: Distance,
-                                    firstWavFileInfo: WavFileInfo,
-                                    secondWavFileInfo: WavFileInfo)
+case class DistanceWithWavFileInfos(
+    distance: Distance,
+    firstWavFileInfo: WavFileInfo,
+    secondWavFileInfo: WavFileInfo
+)
 
 object DistanceWithWavFileInfos {
   def apply(firstWavFile: Path, secondWavFile: Path): DistanceWithWavFileInfos = {
@@ -21,9 +23,10 @@ object DistanceWithWavFileInfos {
     if (bestAlignmentLeft != bestAlignmentRight) {
       println()
       println(
-        s"Warning: best alignment for left = $bestAlignmentLeft vs right = $bestAlignmentRight")
+        s"Warning: best alignment for left = $bestAlignmentLeft vs right = $bestAlignmentRight"
+      )
     }
-    //assert(bestAlignmentLeft == bestAlignmentRight)
+    // assert(bestAlignmentLeft == bestAlignmentRight)
 
     val distanceMerged = Distance.merged(distanceLeft, distanceRight)
 

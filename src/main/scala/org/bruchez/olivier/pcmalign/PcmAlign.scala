@@ -51,17 +51,24 @@ object PcmAlign {
         println(
           s" - '${distanceWithWavFileInfos.firstWavFileInfo.file.toFile.getName}' vs " +
             s"'${distanceWithWavFileInfos.secondWavFileInfo.file.toFile.getName}': " +
-            s"${distanceWithWavFileInfos.distance.asString}")
+            s"${distanceWithWavFileInfos.distance.asString}"
+        )
 
-        if (distanceWithWavFileInfos.firstWavFileInfo.significantLength > distanceWithWavFileInfos.secondWavFileInfo.significantLength) {
-          val extra = distanceWithWavFileInfos.firstWavFileInfo.significantLength - distanceWithWavFileInfos.secondWavFileInfo.significantLength
+        if (
+          distanceWithWavFileInfos.firstWavFileInfo.significantLength > distanceWithWavFileInfos.secondWavFileInfo.significantLength
+        ) {
+          val extra =
+            distanceWithWavFileInfos.firstWavFileInfo.significantLength - distanceWithWavFileInfos.secondWavFileInfo.significantLength
           println(
-            s"    -> favoring '${distanceWithWavFileInfos.firstWavFileInfo.file.toFile.getName}' since it is longer by $extra samples")
+            s"    -> favoring '${distanceWithWavFileInfos.firstWavFileInfo.file.toFile.getName}' since it is longer by $extra samples"
+          )
           distanceWithWavFileInfos.firstWavFileInfo
         } else {
-          val extra = distanceWithWavFileInfos.secondWavFileInfo.significantLength - distanceWithWavFileInfos.firstWavFileInfo.significantLength
+          val extra =
+            distanceWithWavFileInfos.secondWavFileInfo.significantLength - distanceWithWavFileInfos.firstWavFileInfo.significantLength
           println(
-            s"    -> favoring '${distanceWithWavFileInfos.secondWavFileInfo.file.toFile.getName}' since it is longer by $extra samples")
+            s"    -> favoring '${distanceWithWavFileInfos.secondWavFileInfo.file.toFile.getName}' since it is longer by $extra samples"
+          )
           distanceWithWavFileInfos.secondWavFileInfo
         }
       }

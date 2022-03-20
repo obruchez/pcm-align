@@ -17,20 +17,25 @@ object WavFileInfo {
   def headingAndTrailingSilenceLengths(
       pcmShortsLeft: Array[Short],
       pcmShortsRight: Array[Short],
-      threshold: Int = DefaultHeadingAndTrailingThreshold): (Int, Int) = {
+      threshold: Int = DefaultHeadingAndTrailingThreshold
+  ): (Int, Int) = {
     assert(pcmShortsLeft.length == pcmShortsRight.length)
 
     var headingSilenceLength = 0
-    while (pcmShortsLeft(headingSilenceLength).abs <= threshold &&
-           pcmShortsRight(headingSilenceLength).abs <= threshold &&
-           headingSilenceLength < pcmShortsLeft.length) {
+    while (
+      pcmShortsLeft(headingSilenceLength).abs <= threshold &&
+      pcmShortsRight(headingSilenceLength).abs <= threshold &&
+      headingSilenceLength < pcmShortsLeft.length
+    ) {
       headingSilenceLength += 1
     }
 
     var trailingSilenceLength = 0
-    while (pcmShortsLeft(pcmShortsLeft.length - trailingSilenceLength - 1).abs <= threshold &&
-           pcmShortsRight(pcmShortsRight.length - trailingSilenceLength - 1).abs <= threshold &&
-           trailingSilenceLength < pcmShortsLeft.length) {
+    while (
+      pcmShortsLeft(pcmShortsLeft.length - trailingSilenceLength - 1).abs <= threshold &&
+      pcmShortsRight(pcmShortsRight.length - trailingSilenceLength - 1).abs <= threshold &&
+      trailingSilenceLength < pcmShortsLeft.length
+    ) {
       trailingSilenceLength += 1
     }
 

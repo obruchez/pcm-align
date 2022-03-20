@@ -1,11 +1,12 @@
 name := "pcm-align"
 version := "1.0"
-scalaVersion := "2.12.8"
+scalaVersion := "2.13.8"
 
 libraryDependencies += "commons-io" % "commons-io" % "2.6"
+libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4"
 
-mainClass in assembly := Some("org.bruchez.olivier.pcmalign.PcmAlign")
+assembly / mainClass := Some("org.bruchez.olivier.pcmalign.PcmAlign")
 
-assemblyJarName in assembly := "pcm-align.jar"
+assembly / assemblyJarName := "pcm-align.jar"
 
-scalafmtOnCompile in ThisBuild := true
+ThisBuild / scalafmtOnCompile := true

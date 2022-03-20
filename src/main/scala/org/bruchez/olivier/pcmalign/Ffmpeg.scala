@@ -1,8 +1,8 @@
 package org.bruchez.olivier.pcmalign
 
 import java.io.File
-import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.file.{Files, Path}
+import java.nio.{ByteBuffer, ByteOrder}
 import scala.sys.process._
 import scala.util._
 
